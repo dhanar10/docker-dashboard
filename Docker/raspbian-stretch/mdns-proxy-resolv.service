@@ -1,0 +1,10 @@
+[Unit]
+Description=mDNS Proxy Resolv
+After=network.target
+
+[Service]
+ExecStart=/bin/bash -c 'echo -e "nameserver 127.0.0.1\noptions ndots:0" > /etc/resolv.conf'
+StandardOutput=null
+
+[Install]
+WantedBy=multi-user.target

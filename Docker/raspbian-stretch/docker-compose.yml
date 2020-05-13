@@ -1,0 +1,21 @@
+version: '3.5'
+
+services:
+  ssh:
+    build: .
+    restart: unless-stopped
+    hostname: ${COMPOSE_PROJECT_NAME}
+    security_opt:
+      - seccomp:unconfined
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    tmpfs:
+      - /run
+      - /run/lock
+    tty: true
+    networks:
+      - container
+    
+networks:
+  container:
+    name: ${NETWORK:-container_default}

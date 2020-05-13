@@ -1,0 +1,1 @@
+COMPOSE_PROJECT_NAME=ubuntu-bionic-samba docker-compose up -d --build

@@ -1,0 +1,1 @@
+PRIVILEGED=false COMPOSE_PROJECT_NAME=ubuntu-bionic docker-compose up -d --build

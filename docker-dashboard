@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+
+TITLE="docker-dashboard"
+
+create()
+{
+  while true; do
+    LIST=()
+
+    IFS=$'\n'
+    for BLUEPRINT in $(cd ~/Docker && ls -d */ | cut -f1 -d/); do
+      LIST+=( "$BLUEPRINT" "" )
+    done
+    unset IFS
+
+    exec 3>&1
+    BLUEPRINT=$(whiptail --title "$TITLE" --menu "Select a blueprint" 25 78 16 "${LIST[@]}" 2>&1 1>&3)
+    STATUS=$?
+    exec 3>&-
+
+    [[ $STATUS == 1 || $STATUS == 255 ]] && break
+
+    exec 3>&1
+    COMPOSE=$(whiptail --inputbox "$BLUEPRINT" 8 78 "$(cat ~/Docker/"$BLUEPRINT"/COMPOSE)" --title "$TITLE" 2>&1 1>&3)
+    STATUS=$?
+    exec 3>&-
+
+    [[ $STATUS == 1 || $STATUS == 255 ]] && continue
+
+    (cd ~/Docker/"$BLUEPRINT" && eval "$COMPOSE")
+
+    echo
+    echo "Press Enter to continue ..."
+    read
+  done
+}
+
+manage()
+{
+  while true; do
+    LIST=()
+
+    IFS=$'\n'
+    for CONTAINER_ID in $(docker ps -a --format '{{.ID}}'); do
+      CONTAINER_NAME="$(docker inspect -f '{{.Name}}' "$CONTAINER_ID")"
+      CONTAINER_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$CONTAINER_ID")"
+      CONTAINER_STATUS=$([ $(docker inspect -f '{{.State.Running}}' "$CONTAINER_ID") == "true" ] && echo -n "UP  " || echo -n "DOWN")
+      LIST+=( "$CONTAINER_ID" "$CONTAINER_STATUS $CONTAINER_IP $CONTAINER_NAME" )
+    done
+    unset IFS
+
+    exec 3>&1
+    CONTAINER_ID=$(whiptail --title "$TITLE" --menu "Select a container" 25 118 16 "${LIST[@]}" 2>&1 1>&3)
+    STATUS=$?
+    exec 3>&-
+
+    [[ $STATUS == 1 || $STATUS == 255 ]] && break
+
+    CONTAINER_NAME="$(docker inspect -f '{{.Name}}' "$CONTAINER_ID")"
+    CONTAINER_PORTS="$(docker inspect -f '{{.NetworkSettings.Ports}}' "$CONTAINER_ID")"
+
+    LIST=()
+
+    LIST+=("start" "Start the container")
+    LIST+=("stop" "Stop the container")
+    LIST+=("rm" "Remove the container")
+
+    exec 3>&1
+    COMMAND=$(whiptail --title "$TITLE" --menu "$CONTAINER_NAME\n$CONTAINER_PORTS" 25 78 16 "${LIST[@]}" 2>&1 1>&3)
+    STATUS=$?
+    exec 3>&-
+
+    [[ $STATUS == 1 || $STATUS == 255 ]] && continue
+
+    docker $COMMAND $CONTAINER_ID
+  done
+}
+
+while true; do
+  LIST=()
+
+  LIST+=("create" "Create a container")
+  LIST+=("manage" "Manage existing container")
+
+  exec 3>&1
+  TASK=$(whiptail --title "$TITLE" --menu "Select a task" 25 78 16 "${LIST[@]}" 2>&1 1>&3)
+  STATUS=$?
+  exec 3>&-
+
+  [[ $STATUS == 1 || $STATUS == 255 ]] && clear && exit
+
+  case $TASK in
+    create)
+       create
+       ;;
+    manage)
+       manage
+       ;;
+  esac
+done
